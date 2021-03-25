@@ -1,9 +1,15 @@
 <template>
   <div id="board">
     <div class="row" v-for="(row, index) in squares" :key="index">
-      <div class="square" :class="{'even': squareColor(index, i)}" v-for="(col, i) in squares[index]" :key="i" @click="handleClick($event, index, i)">
-        <div v-if="col.image" :class="{'selected': col.selected}" class="background-square" >
-          <img class="image" v-if="col.image" :src="col.image"  />
+      <div
+        class="square"
+        :class="{ even: squareColor(index, i), selected: col.selected }"
+        v-for="(col, i) in squares[index]"
+        :key="i"
+        @click="handleClick($event, index, i)"
+      >
+        <div v-if="col.image" class="background-square">
+          <img class="image" v-if="col.image" :src="col.image" />
         </div>
       </div>
     </div>
@@ -11,25 +17,25 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent } from 'vue'
+import { ref, defineComponent } from "vue";
 
 interface Square {
-  title: String,
-  image: String,
-  selected: Boolean
+  title: String;
+  image: String;
+  selected: Boolean;
 }
 
 export default defineComponent({
-  name: 'Board',
+  name: "Board",
   props: {
     rows: {
       type: Number,
-      required: true
+      required: true,
     },
     cols: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
   methods: {
     squareColor(row: number, col: number) {
@@ -43,31 +49,158 @@ export default defineComponent({
         }
       }
     },
-    selected(row: number, col: number) {
-      return true;
+    selectedSquare() {
+      // if (!this.selectedItem.x) return false;
+      let y = this.selectedItem.y;
+      let x = this.selectedItem.x;
+      if (!x || !y) return;
+      return this.squares[y][x];
     },
-    handleClick(event: CustomEvent, row: number, col: number) {
-      console.log(event.target);
-      // let el = event.target;
-      let el = this.squares[row][col]
-      this.selectedItem.selected = false;
-      this.selectedItem = el;
-      // console.log(`El before: ${JSON.stringify(el)}`);
-      el.selected = true;
-      // console.log(`El after: ${JSON.stringify(el)}`);
-      
-      this.availableMoves(el)
-      
-      
-      console.log(this.squares[row][col])
-      console.log(`row: ${row} - col: ${col}`)
+    setSelected() {
+      // this.selectedItem
     },
-    availableMoves(el: {}) {
-      let piece = el.piece;
-      if (piece === 'pawn') {
-        
+
+    handleClick(event: any, row: number, col: number) {
+      let target = this.squares[row][col];
+      let selected;
+      if (this.selectedItem) {
+        let selectedRow = this.selectedItem.y;
+        let selectedCol = this.selectedItem.x;
+        if (selectedRow !== -1 && selectedCol !== -1) {
+          selected = this.squares[selectedRow][selectedCol]
+        }
       }
-      
+      // let prev = this.selectedSquare()
+      if (this.selectedItem && !target.piece) {
+        console.log(`selected: ${JSON.stringify(this.selectedItem)}`);
+        // let prev = this.selectedSquare();
+        if (this.isMoveAvailable(selected, target)) {
+          target.piece = selected?.piece;
+          target.image = selected?.image;
+          target.white = selected?.white;
+          this.selectedItem = null;
+          // prev.image = false;
+          selected.image = undefined;
+          this.movePiece(selected, target);
+          this.resetSelected();
+          return;
+        } else {
+          return;
+        }
+      }
+      if (this.selectedItem && target.piece && this.selectedItem.x !== -1) {
+        if (!this.isMoveAvailable(selected, target)) return;
+        if (selected?.white !== target.white) {
+          target.image = selected?.image;
+          selected.image = undefined;
+
+        }
+        console.log('Piece detected: ' + target.white);
+          console.log(`selected: ${JSON.stringify(selected)}`);
+      }
+      // if (this.selectedItem.x >= 0 && target.piece) {
+
+        // let prev = this.selectedSquare();
+
+        // let prev = this.selectedSquare();
+        // if (prev.white === target.white) return;
+      // }
+
+      this.selectedItem = { x: col, y: row };
+
+      // this.selectedItem.selected = false;
+      // this.selectedItem = target;
+      // target.selected = true;
+
+      // console.log(this.squares[row][col])
+      // console.log(`row: ${row} - col: ${col}`)
+    },
+    movePiece(el, target) {
+      // console.log(`target: ${JSON.stringify(target)}`);
+      if (el.piece === "pawn") {
+        if (el.white) {
+          if (target.location === el.location) return;
+        }
+      }
+    },
+    showAvailableMoves(el: any, row: any, col: any) {
+      let piece = el.piece;
+      if (piece === "pawn") {
+        if (el.white) {
+          this.squares[row - 1][col].selected = true;
+        } else {
+          this.squares[row + 1][col].selected = true;
+        }
+      }
+    },
+    isMoveAvailable(source: any, target: any) {
+      console.log(
+        `Source: ${source.location.x} - Target: ${target.location.x}`
+      );
+      let diffX = Math.abs(source.location.x - target.location.x);
+      let diffY = source.location.y - target.location.y;
+
+      // Pawn logic
+      if (source.piece === "pawn") {
+        if (target.location.x !== source.location.x) {
+          if (diffX === 1) {
+            if (!target.piece) return;
+            if (source.white) {
+              if (diffY === 1 && target.piece) {
+                return true;
+              }
+            } else if (source.white) {
+              if (diffX === 1 && target.piece) {
+                console.log('Pawn moving');
+                
+                return true;
+              }
+            }
+          }
+        } else {
+          if (source.white) {
+            if (target.location.y < source.location.y) {
+              let diff = Math.abs(target.location.y - source.location.y);
+              if (source.location.y === 1 || source.location.y === 6) {
+                if (diff === 1 || diff === 2) {
+                  return true;
+                }
+              } else {
+                if (diff === 1) {
+                  if (target.piece) return;
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+      if (source.piece === "bishop") {
+      }
+      return false;
+    },
+    availableMoves(el: any, row: number, col: number) {
+      let piece = el.piece;
+      let moves = [];
+      if (piece === "pawn") {
+        if (el.white) {
+          console.log(`X: ${row} - Y: ${col}`);
+
+          moves.push({ x: col, y: row });
+          // moves.push(this.squares[row-1][col]);
+        } else {
+          moves.push(this.squares[row + 1][col]);
+        }
+      }
+      return moves;
+    },
+    resetSelected() {
+      for (let i = 0; i < this.squares.length; i++) {
+        for (let j = 0; j < this.squares.length; j++) {
+          this.squares[i][j].selected = false;
+        }
+      }
+      this.selectedItem = undefined;
     },
     getStats(row: number, col: number, stat: string) {
       let piece;
@@ -75,87 +208,107 @@ export default defineComponent({
       let color;
       let white;
       if (row === 0 || row === 1) {
-        color = 'black';
+        color = "black";
         white = false;
-      } 
+      }
       if (row === 6 || row === 7) {
-        color = 'white';
+        color = "white";
         white = true;
-      } 
+      }
 
-      if (stat !== 'white') {
+      if (stat !== "white") {
         if (row === 0 || row === 7) {
           switch (col) {
             case 0:
             case 7:
-              piece = 'castle';
+              piece = "castle";
               img = `/castle-${color}.png`;
               break;
             case 1:
             case 6:
-              piece = 'knight';
+              piece = "knight";
               img = `/knight-${color}.png`;
 
               break;
             case 2:
             case 5:
-              piece = 'bishop';
+              piece = "bishop";
               img = `/bishop-${color}.png`;
               break;
             case 3:
-              piece = 'queen';
+              piece = "queen";
               img = `/queen-${color}.png`;
               break;
             case 4:
-              piece = 'king';
+              piece = "king";
               img = `/king-${color}.png`;
 
               break;
           }
         } else if (row === 1 || row === 6) {
-          piece = 'pawn';
+          piece = "pawn";
           img = `/pawn-${color}.png`;
         }
       }
-        if (stat === 'piece') return piece;
-        if (stat === 'white') return white;
-        if (stat === 'image') return img;
-
-    }
+      if (stat === "piece") return piece;
+      if (stat === "white") return white;
+      if (stat === "image") return img;
+    },
   },
   data() {
     return {
-      squares: [[{title: String, image: String, selected: Boolean, piece: String, white: Boolean }]],
-      selectedItem: {
-        title: String,
-        image: String,
-        selected: Boolean
-      }
-    }
+      squares: [
+        [
+          {
+            title: String || undefined,
+            image: String || undefined,
+            selected: Boolean || undefined,
+            piece: String || undefined,
+            white: Boolean || undefined,
+            location: { x: Number, y: Number },
+          },
+        ],
+      ],
+      turn: 'white',
+      // selectedItem: {
+      //   title: String,
+      //   image: String,
+      //   selected: Boolean
+      // }
+      selectedItem: { x: -1, y: -1 } || null,
+    };
   },
   mounted() {
-    this.squares = []
-      for (let i = 0; i < this.rows; i++) {
-        let  tempArray = [];
-        for (let j = 0; j < this.cols; j ++) {
-          // this.getImage(i, j)
-          tempArray.push({title: `a${j}`, image: this.getStats(i, j, 'image'), selected: false, white: this.getStats(i, j, 'white') ,piece: this.getStats(i, j, 'piece')})
-        }
-        this.squares.push(tempArray)
+    this.squares = [];
+    for (let i = 0; i < this.rows; i++) {
+      let tempArray = [];
+      for (let j = 0; j < this.cols; j++) {
+        // this.getImage(i, j)
+        tempArray.push({
+          title: `a${j}`,
+          image: this.getStats(i, j, "image"),
+          selected: false,
+          white: this.getStats(i, j, "white"),
+          piece: this.getStats(i, j, "piece"),
+          location: { x: j, y: i },
+        });
       }
-      console.log(document.querySelectorAll('.image'))
-      console.log(this.squares)
+      this.squares.push(tempArray);
+    }
+    // console.log(document.querySelectorAll('.image'))
+    // console.log(this.squares)
   },
   setup: () => {
-    const count = ref(0)
-    return { count }
-  }
-})
+    const count = ref(0);
+    return { count };
+  },
+});
 </script>
 
 <style scoped>
 #board {
-  width: 100%;
+  /* width: 100%; */
+  margin-left: 200px;
 }
 .square {
   width: 100px;
@@ -163,9 +316,15 @@ export default defineComponent({
   background-color: rgba(108, 108, 108, 0.975);
 }
 
+.square:hover {
+  transition: all 100ms;
+  background-color: rgba(48, 84, 61, 0.605);
+  cursor: pointer;
+}
+
 .row {
   display: flex;
-  
+  width: 800px;
 }
 
 .even {
@@ -173,10 +332,14 @@ export default defineComponent({
 }
 
 .selected {
-  background-color: rgba(82, 157, 90, 0.673)
+  background-color: rgba(82, 157, 90, 0.673);
 }
 
 .background-square {
   height: 100%;
 }
 </style>
+
+function selectedSquare() {
+  throw new Error("Function not implemented.");
+}
