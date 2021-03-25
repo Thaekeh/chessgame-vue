@@ -75,12 +75,7 @@ export default defineComponent({
         console.log(`selected: ${JSON.stringify(this.selectedItem)}`);
         // let prev = this.selectedSquare();
         if (this.isMoveAvailable(selected, target)) {
-          target.piece = selected?.piece;
-          target.image = selected?.image;
-          target.white = selected?.white;
-          this.selectedItem = null;
-          // prev.image = false;
-          selected.image = undefined;
+
           this.movePiece(selected, target);
           this.resetSelected();
           return;
@@ -91,8 +86,9 @@ export default defineComponent({
       if (this.selectedItem && target.piece && this.selectedItem.x !== -1) {
         if (!this.isMoveAvailable(selected, target)) return;
         if (selected?.white !== target.white) {
-          target.image = selected?.image;
-          selected.image = undefined;
+          this.movePiece(selected, target);
+          // target.image = selected?.image;
+          // selected.image = undefined;
 
         }
         console.log('Piece detected: ' + target.white);
@@ -117,11 +113,16 @@ export default defineComponent({
     },
     movePiece(el, target) {
       // console.log(`target: ${JSON.stringify(target)}`);
-      if (el.piece === "pawn") {
-        if (el.white) {
-          if (target.location === el.location) return;
-        }
-      }
+      // if (el.piece === "pawn") {
+      //   if (el.white) {
+      //     if (target.location === el.location) return;
+      //   }
+      // }
+      target.image = el.image;
+      target.piece = el.piece;
+      target.white = el?.white;
+      el.image = undefined;
+      el.piece = undefined;
     },
     showAvailableMoves(el: any, row: any, col: any) {
       let piece = el.piece;
@@ -137,8 +138,10 @@ export default defineComponent({
       console.log(
         `Source: ${source.location.x} - Target: ${target.location.x}`
       );
-      let diffX = Math.abs(source.location.x - target.location.x);
+      let diffX = source.location.x - target.location.x;
       let diffY = source.location.y - target.location.y;
+      let absoluteDiffX = Math.abs(diffX);
+      let absoluteDiffY = Math.abs(diffY);
 
       // Pawn logic
       if (source.piece === "pawn") {
@@ -150,7 +153,7 @@ export default defineComponent({
                 return true;
               }
             } else if (source.white) {
-              if (diffX === 1 && target.piece) {
+              if (absoluteDiffX === 1 && target.piece) {
                 console.log('Pawn moving');
                 
                 return true;
@@ -160,13 +163,12 @@ export default defineComponent({
         } else {
           if (source.white) {
             if (target.location.y < source.location.y) {
-              let diff = Math.abs(target.location.y - source.location.y);
               if (source.location.y === 1 || source.location.y === 6) {
-                if (diff === 1 || diff === 2) {
+                if (absoluteDiffY === 1 || absoluteDiffY === 2) {
                   return true;
                 }
               } else {
-                if (diff === 1) {
+                if (absoluteDiffY === 1) {
                   if (target.piece) return;
                   return true;
                 }
@@ -176,8 +178,27 @@ export default defineComponent({
         }
       }
       if (source.piece === "bishop") {
+        if (absoluteDiffX === absoluteDiffY) {
+          console.log(`Diagonal movement`)
+          if (this.findObstacleDiagonal(source, target, diffY)) return;
+          this.movePiece(source, target);
+          this.resetSelected();
+          // Find pawns inbetween selected piece and target location
+        }
       }
       return false;
+    },
+    findObstacleDiagonal(source: any, target: any, pathLength: any) {
+      console.log(`From: ${JSON.stringify(source.location)}`);
+      console.log(`To: ${JSON.stringify(target.location)}`);
+      console.log(`Path: ${JSON.stringify(pathLength)}`);
+      for (let i = 0; i < pathLength; i++) {
+        console.log(`Update: ${source.location.y + i} - ${source.location.x + i}`)
+        if (this.squares[source.location.y + i][source.location.x + i].piece === undefined) {
+          console.log('Obstacle found');
+          return true;
+        }
+      }
     },
     availableMoves(el: any, row: number, col: number) {
       let piece = el.piece;
@@ -228,7 +249,6 @@ export default defineComponent({
             case 6:
               piece = "knight";
               img = `/knight-${color}.png`;
-
               break;
             case 2:
             case 5:
@@ -242,12 +262,13 @@ export default defineComponent({
             case 4:
               piece = "king";
               img = `/king-${color}.png`;
-
               break;
           }
         } else if (row === 1 || row === 6) {
           piece = "pawn";
           img = `/pawn-${color}.png`;
+        } else {
+          piece = undefined;
         }
       }
       if (stat === "piece") return piece;
