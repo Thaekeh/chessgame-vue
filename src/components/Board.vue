@@ -3,7 +3,11 @@
     <div class="row" v-for="(row, index) in squares" :key="index">
       <div
         class="square"
-        :class="{ even: squareColor(index, i), selected: col.selected }"
+        :class="{
+          even: squareColor(index, i),
+          selected: col.selected,
+          isSelected: isSelectedSquare(row, col),
+        }"
         v-for="(col, i) in squares[index]"
         :key="i"
         @click="handleClick($event, index, i)"
@@ -20,10 +24,37 @@
 import { ref, defineComponent } from "vue";
 
 interface Square {
-  title: String;
-  image: String;
-  selected: Boolean;
+  title: string;
+  image: string;
+  selected: boolean;
+  piece: string;
+  white: boolean;
+  location: {
+    x: number;
+    y: number;
+  };
 }
+
+interface SelectedItem {
+  x: number | undefined;
+  y: number | undefined;
+}
+
+interface Coordinate {
+  x: number;
+  y: number;
+}
+
+interface Pieces {
+  r: string;
+  n: string;
+  k: string;
+  q: string;
+  b: string;
+  p: string;
+}
+
+type PieceKey = "r" | "n" | "k" | "q" | "b" | "p";
 
 export default defineComponent({
   name: "Board",
@@ -38,6 +69,9 @@ export default defineComponent({
     },
   },
   methods: {
+    aFieldIsSelected() {
+      if (this.selectedItem.x && this.selectedItem.y) return true;
+    },
     squareColor(row: number, col: number) {
       if (row % 2 === 0) {
         if (col % 2 === 0) {
@@ -50,59 +84,83 @@ export default defineComponent({
       }
     },
     selectedSquare() {
-      // if (!this.selectedItem.x) return false;
       let y = this.selectedItem.y;
       let x = this.selectedItem.x;
       if (!x || !y) return;
       return this.squares[y][x];
     },
+    isSelectedSquare(row: number, col: number) {
+      if (this.selectedItem.x === row && this.selectedItem.y === col) {
+        console.log(
+          `Is selected: Row: ${JSON.stringify(row)}, Col: ${JSON.stringify(
+            col
+          )}`
+        );
+        return true;
+      }
+    },
     setSelected() {
       // this.selectedItem
     },
-
+    getSquare(x: number, y: number) {
+      return this.squares[x][y];
+    },
     handleClick(event: any, row: number, col: number) {
       let target = this.squares[row][col];
       let selected;
-      if (this.selectedItem) {
-        let selectedRow = this.selectedItem.y;
-        let selectedCol = this.selectedItem.x;
-        if (selectedRow !== -1 && selectedCol !== -1) {
-          selected = this.squares[selectedRow][selectedCol]
-        }
+      if (!this.aFieldIsSelected()) {
+        this.selectedItem = { x: row, y: col };
+        // this.squares[row][col].selected = true;
+        return;
       }
+      if (this.aFieldIsSelected()) {
+        if (
+          this.isMoveAvailable(this.selectedSquare(), this.getSquare(row, col))
+        ) {
+          // console.log("is available");
+        }
+        // this.squares[row][col].selected = true;
+      }
+
+      // if (this.selectedItem) {
+      //   let selectedRow = this.selectedItem.y;
+      //   let selectedCol = this.selectedItem.x;
+      //   if (selectedRow !== -1 && selectedCol !== -1) {
+      //     selected = this.squares[selectedRow][selectedCol];
+      //   }
+      // }
       // let prev = this.selectedSquare()
-      if (this.selectedItem && !target.piece) {
-        console.log(`selected: ${JSON.stringify(this.selectedItem)}`);
-        // let prev = this.selectedSquare();
-        if (this.isMoveAvailable(selected, target)) {
 
-          this.movePiece(selected, target);
-          this.resetSelected();
-          return;
-        } else {
-          return;
-        }
-      }
-      if (this.selectedItem && target.piece && this.selectedItem.x !== -1) {
-        if (!this.isMoveAvailable(selected, target)) return;
-        if (selected?.white !== target.white) {
-          this.movePiece(selected, target);
-          // target.image = selected?.image;
-          // selected.image = undefined;
-
-        }
-        console.log('Piece detected: ' + target.white);
-          console.log(`selected: ${JSON.stringify(selected)}`);
-      }
+      // if (this.selectedItem && !target.piece) {
+      //   console.log(`selected: ${JSON.stringify(this.selectedItem)}`);
+      //   // let prev = this.selectedSquare();
+      //   if (this.isMoveAvailable(selected, target)) {
+      //     this.movePiece(selected, target);
+      //     this.resetSelected();
+      //     return;
+      //   } else {
+      //     return;
+      //   }
+      // }
+      // if (this.selectedItem && target.piece && this.selectedItem.x !== -1) {
+      //   if (!this.isMoveAvailable(selected, target)) return;
+      //   if (selected?.white !== target.white) {
+      //     this.movePiece(selected, target);
+      //     // target.image = selected?.image;
+      //     // selected.image = undefined;
+      //   }
+      //   console.log("Piece detected: " + target.white);
+      //   console.log(`selected: ${JSON.stringify(selected)}`);
+      // }
       // if (this.selectedItem.x >= 0 && target.piece) {
 
-        // let prev = this.selectedSquare();
+      // let prev = this.selectedSquare();
 
-        // let prev = this.selectedSquare();
-        // if (prev.white === target.white) return;
+      // let prev = this.selectedSquare();
+      // if (prev.white === target.white) return;
       // }
 
-      this.selectedItem = { x: col, y: row };
+      // this.selectedItem = { x: col, y: row };
 
       // this.selectedItem.selected = false;
       // this.selectedItem = target;
@@ -135,9 +193,10 @@ export default defineComponent({
       }
     },
     isMoveAvailable(source: any, target: any) {
-      console.log(
-        `Source: ${source.location.x} - Target: ${target.location.x}`
-      );
+      // console.log(
+      //   `Source: ${source.location.x} - Target: ${target.location.x}`
+      // );
+      console.log("Source: " + JSON.stringify(source));
       let diffX = source.location.x - target.location.x;
       let diffY = source.location.y - target.location.y;
       let absoluteDiffX = Math.abs(diffX);
@@ -145,6 +204,8 @@ export default defineComponent({
 
       // Pawn logic
       if (source.piece === "pawn") {
+        console.log(`Is pawn`);
+
         if (target.location.x !== source.location.x) {
           if (diffX === 1) {
             if (!target.piece) return;
@@ -154,8 +215,8 @@ export default defineComponent({
               }
             } else if (source.white) {
               if (absoluteDiffX === 1 && target.piece) {
-                console.log('Pawn moving');
-                
+                console.log("Pawn moving");
+
                 return true;
               }
             }
@@ -179,7 +240,7 @@ export default defineComponent({
       }
       if (source.piece === "bishop") {
         if (absoluteDiffX === absoluteDiffY) {
-          console.log(`Diagonal movement`)
+          console.log(`Diagonal movement`);
           if (this.findObstacleDiagonal(source, target, diffY)) return;
           this.movePiece(source, target);
           this.resetSelected();
@@ -193,9 +254,14 @@ export default defineComponent({
       console.log(`To: ${JSON.stringify(target.location)}`);
       console.log(`Path: ${JSON.stringify(pathLength)}`);
       for (let i = 0; i < pathLength; i++) {
-        console.log(`Update: ${source.location.y + i} - ${source.location.x + i}`)
-        if (this.squares[source.location.y + i][source.location.x + i].piece === undefined) {
-          console.log('Obstacle found');
+        console.log(
+          `Update: ${source.location.y + i} - ${source.location.x + i}`
+        );
+        if (
+          this.squares[source.location.y + i][source.location.x + i].piece ===
+          undefined
+        ) {
+          console.log("Obstacle found");
           return true;
         }
       }
@@ -222,6 +288,47 @@ export default defineComponent({
         }
       }
       this.selectedItem = undefined;
+    },
+    getPiece(char: string) {},
+    setupPieces() {
+      const gameData = this.initialPiecePositions;
+      let rows = gameData.split(" ")[0].split("/");
+      console.log(`positions: ${rows[0]}`);
+      for (let i = 0; i < rows.length; i++) {
+        let charArray = rows[i].split("");
+        for (let j = 0; j < charArray.length; j++) {
+          const char = charArray[j];
+          if (/[a-zA-Z]/.test(char)) {
+            const piece: PieceKey | number = this.pieces[char];
+            if (char.toLowerCase() === char) {
+            }
+
+            break;
+          }
+          console.log(char);
+          j += parseInt(char);
+        }
+        //   for (let j = 0; j < this.cols; j++) {
+
+        //   }
+      }
+    },
+    setupBoard() {
+      this.squares = [];
+      for (let i = 0; i < this.rows; i++) {
+        let tempArray = [];
+        for (let j = 0; j < this.cols; j++) {
+          tempArray.push({
+            title: `a${j}`,
+            image: this.getStats(i, j, "image"),
+            selected: false,
+            white: this.getStats(i, j, "white"),
+            piece: this.getStats(i, j, "piece"),
+            location: { x: j, y: i },
+          });
+        }
+        this.squares.push(tempArray);
+      }
     },
     getStats(row: number, col: number, stat: string) {
       let piece;
@@ -278,46 +385,54 @@ export default defineComponent({
   },
   data() {
     return {
+      pieces: {
+        r: "rook",
+        n: "knight",
+        k: "knight",
+        q: "queen",
+        b: "bishop",
+        p: "pawn",
+      } as Pieces,
       squares: [
         [
           {
-            title: String || undefined,
-            image: String || undefined,
-            selected: Boolean || undefined,
-            piece: String || undefined,
-            white: Boolean || undefined,
-            location: { x: Number, y: Number },
+            title: "",
+            image: "",
+            selected: false,
+            piece: "",
+            white: true,
+            location: { x: 0, y: 0 },
           },
         ],
-      ],
-      turn: 'white',
-      // selectedItem: {
-      //   title: String,
-      //   image: String,
-      //   selected: Boolean
-      // }
-      selectedItem: { x: -1, y: -1 } || null,
+      ] as Square[][],
+      turn: "white",
+      selectedItem: { x: undefined, y: undefined } as SelectedItem,
+      initialPiecePositions:
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" as string,
+      currentPiecePositions:
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" as string,
     };
   },
   mounted() {
-    this.squares = [];
-    for (let i = 0; i < this.rows; i++) {
-      let tempArray = [];
-      for (let j = 0; j < this.cols; j++) {
-        // this.getImage(i, j)
-        tempArray.push({
-          title: `a${j}`,
-          image: this.getStats(i, j, "image"),
-          selected: false,
-          white: this.getStats(i, j, "white"),
-          piece: this.getStats(i, j, "piece"),
-          location: { x: j, y: i },
-        });
-      }
-      this.squares.push(tempArray);
-    }
-    // console.log(document.querySelectorAll('.image'))
-    // console.log(this.squares)
+    this.setupBoard();
+    this.setupPieces();
+    // for (let i = 0; i < this.rows; i++) {
+    //   let tempArray = [];
+    //   for (let j = 0; j < this.cols; j++) {
+    //     // this.getImage(i, j)
+    //     tempArray.push({
+    //       title: `a${j}`,
+    //       image: this.getStats(i, j, "image"),
+    //       selected: false,
+    //       white: this.getStats(i, j, "white"),
+    //       piece: this.getStats(i, j, "piece"),
+    //       location: { x: j, y: i },
+    //     });
+    //   }
+    //   this.squares.push(tempArray);
+    // }
+    // console.log(document.querySelectorAll(".image"));
+    // console.log(this.squares);
   },
   setup: () => {
     const count = ref(0);
@@ -356,11 +471,19 @@ export default defineComponent({
   background-color: rgba(82, 157, 90, 0.673);
 }
 
+.image {
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
 .background-square {
   height: 100%;
 }
-</style>
 
-function selectedSquare() {
-  throw new Error("Function not implemented.");
+.isSelected {
+  background-color: red;
 }
+</style>
